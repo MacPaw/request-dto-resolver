@@ -1,0 +1,56 @@
+{
+    "name": "macpaw/request-dto-resolver",
+    "description": "Request DTO resolver bundle",
+    "homepage": "https://github.com/MacPaw/request-dto-resolver",
+    "type": "symfony-bundle",
+    "keywords": [
+        "request",
+        "dto",
+        "resolver"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": ">=8.0",
+        "symfony/form": "^6.4|^7.0",
+        "symfony/framework-bundle": "^6.4|^7.0",
+        "symfony/validator": "^6.4|^7.0"
+    },
+    "require-dev": {
+        "escapestudios/symfony2-coding-standard": "3.x-dev",
+        "phpstan/phpstan": "^1.0",
+        "phpunit/phpunit": "^10.0",
+        "slevomat/coding-standard": "^8.0",
+        "squizlabs/php_codesniffer": "^3.0",
+        "symfony/yaml": "^6.4|^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "RequestDtoResolver\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RequestDtoResolver\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "cs": [
+            "vendor/bin/phpcs"
+        ],
+        "cs-fix": [
+            "vendor/bin/phpcbf"
+        ],
+        "phpstan": [
+            "vendor/bin/phpstan"
+        ],
+        "phpunit": [
+            "vendor/bin/phpunit"
+        ]
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}

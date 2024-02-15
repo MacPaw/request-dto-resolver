@@ -1,0 +1,2 @@
+request_dto_resolver:
+    target_dto_interface: 'RequestDtoResolver\Tests\Fixture\TargetDtoInterface'

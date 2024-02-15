@@ -1,0 +1,11 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: true
+
+    RequestDtoResolver\Resolver\RequestDtoResolver:
+        arguments:
+            $targetDtoInterface: '%request_dto_resolver.target_dto_interface%'
+        tags:
+            - {name: controller.argument_value_resolver, priority: 150}
