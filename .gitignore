@@ -1,0 +1,7 @@
+**/.DS_Store
+.idea/*
+.phpcs-cache
+composer.lock
+phpunit.xml
+var/
+vendor/
