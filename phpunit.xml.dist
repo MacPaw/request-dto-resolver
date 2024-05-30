@@ -5,27 +5,33 @@
          cacheResult="false"
          beStrictAboutOutputDuringTests="true"
 >
-  <php>
-    <ini name="error_reporting" value="-1"/>
-    <ini name="memory_limit" value="-1"/>
-    <server name="APP_ENV" value="test" force="true"/>
-    <server name="APP_DEBUG" value="0" force="true"/>
-    <server name="SHELL_VERBOSITY" value="-1"/>
-    <server name="SYMFONY_PHPUNIT_REMOVE" value=""/>
-    <server name="SYMFONY_PHPUNIT_VERSION" value="10"/>
-    <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled"/>
-  </php>
-  <testsuites>
-    <testsuite name="integration">
-      <directory>tests/Integration</directory>
-    </testsuite>
-  </testsuites>
-  <source>
-    <include>
-      <directory>./src</directory>
-    </include>
-    <exclude>
-      <directory suffix="Exception.php">./src</directory>
-    </exclude>
-  </source>
+    <php>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="memory_limit" value="-1"/>
+        <server name="APP_ENV" value="test" force="true"/>
+        <server name="APP_DEBUG" value="0" force="true"/>
+        <server name="SHELL_VERBOSITY" value="-1"/>
+        <server name="SYMFONY_PHPUNIT_REMOVE" value=""/>
+        <server name="SYMFONY_PHPUNIT_VERSION" value="10"/>
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled"/>
+    </php>
+    <testsuites>
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>./src</directory>
+        </include>
+        <exclude>
+            <directory suffix="Exception.php">src</directory>
+            <directory suffix="php">src/DependencyInjection</directory>
+        </exclude>
+    </source>
+    <coverage>
+        <report>
+            <clover outputFile="coverage.xml"/>
+        </report>
+    </coverage>
 </phpunit>
