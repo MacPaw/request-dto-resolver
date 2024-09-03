@@ -6,9 +6,9 @@ namespace RequestDtoResolver\Tests\Fixture;
 
 use RequestDtoResolver\Attribute\FormType;
 
-class TestController
+class Controller
 {
-    #[FormType(class: TestForm::class)]
+    #[FormType(class: Form::class)]
     public function __invoke()
     {
     }

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace RequestDtoResolver\Resolver;
 
-use Exception;
 use ReflectionClass;
 use RequestDtoResolver\Attribute\FormType;
 use RequestDtoResolver\Exception\InvalidParamsDtoException;
+use RequestDtoResolver\Exception\MissingFormTypeAttributeException;
+use Symfony\Component\Form\AbstractType as FormAbstractType;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
@@ -15,11 +16,11 @@ use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
 
-class RequestDtoResolver implements ValueResolverInterface
+readonly class RequestDtoResolver implements ValueResolverInterface
 {
     public function __construct(
-        private readonly FormFactoryInterface $formFactory,
-        private readonly string $targetDtoInterface,
+        private FormFactoryInterface $formFactory,
+        private string $targetDtoInterface,
     ) {
     }
 
@@ -31,9 +32,9 @@ class RequestDtoResolver implements ValueResolverInterface
             return [];
         }
 
-        /** @var string $controllerClass */
-        $controllerClass = $request->attributes->get('_controller');
-        $formType = $this->getFormType($controllerClass);
+        $formType = is_subclass_of($dtoClass, FormAbstractType::class)
+            ? $dtoClass
+            : $this->getFormTypeFromReflection($request);
 
         $form = $this->formFactory->create($formType);
 
@@ -62,14 +63,17 @@ class RequestDtoResolver implements ValueResolverInterface
         return [$form->getData()];
     }
 
-    private function getFormType(string $controllerClass): string
+    private function getFormTypeFromReflection(Request $request): string
     {
+        /** @var string $controllerClass */
+        $controllerClass = $request->attributes->get('_controller');
+
         $reflection = new ReflectionClass($controllerClass);
 
         $attributes = $reflection->getMethod('__invoke')->getAttributes(FormType::class);
 
         if (count($attributes) <= 0) {
-            throw new Exception('No FormType argument is specified for controller method');
+            throw new MissingFormTypeAttributeException($controllerClass);
         }
 
         /** @var FormType $attribute */
