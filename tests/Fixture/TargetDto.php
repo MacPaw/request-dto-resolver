@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RequestDtoResolver\Tests\Fixture;
 
-class TestDto implements TargetDtoInterface
+class TargetDto implements TargetDtoInterface
 {
     public string $foo;
 
