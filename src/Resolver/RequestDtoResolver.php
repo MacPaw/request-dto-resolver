@@ -40,9 +40,10 @@ readonly class RequestDtoResolver implements ValueResolverInterface
 
         $params = [];
         foreach ($form->all() as $key => $value) {
-            $params[$key] = $request->get($key);
+            $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
+            $params[$key] = $request->get($lookupKey);
             if ($params[$key] === null) {
-                $params[$key] = $request->headers->get($key);
+                $params[$key] = $request->headers->get($lookupKey);
             }
         }
 

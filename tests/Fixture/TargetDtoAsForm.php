@@ -12,6 +12,8 @@ class TargetDtoAsForm extends Form implements TargetDtoInterface
 
     public string $bar;
 
+    public string $baz;
+
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
