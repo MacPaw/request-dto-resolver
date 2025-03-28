@@ -28,6 +28,16 @@ class Form extends AbstractType
                 'constraints' => [
                     new Assert\NotBlank(message: 'notBlank'),
                 ]
+            ])
+            ->add('baz', TextType::class, [
+                'required' => true,
+                'invalid_message' => 'invalidBaz',
+                'constraints' => [
+                    new Assert\NotBlank(message: 'notBlank'),
+                ],
+                'attr' => [
+                    'lookupKey' => 'Baz-key'
+                ]
             ]);
     }
 
