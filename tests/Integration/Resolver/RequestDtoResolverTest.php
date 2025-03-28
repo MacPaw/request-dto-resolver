@@ -34,6 +34,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $request->attributes->set('_controller', Controller::class);
         $request->request->set('foo', 'abc');
         $request->request->set('bar', 'def');
+        $request->request->set('Baz-key', 'ghi');
 
         $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
 
@@ -49,6 +50,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $request->attributes->set('_controller', Controller::class);
         $request->request->set('foo', 5);
         $request->request->set('bar', false);
+        $request->request->set('Baz-key', false);
 
         $this->expectException(InvalidParamsDtoException::class);
         $this->requestDtoResolver->resolve($request, $argumentMock);
@@ -106,6 +108,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $request->request->set('foo', null);
         $request->request->set('bar', 'abc');
         $request->headers->set('foo', 'headerValue');
+        $request->headers->set('Baz-key', 'bazHeaderValue');
 
         $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
 
@@ -121,6 +124,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $request->attributes->set('_controller', Controller::class);
         $request->request->set('foo', 'abc');
         $request->request->set('bar', 'def');
+        $request->request->set('Baz-key', 'ghi');
 
         $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
 

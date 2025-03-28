@@ -9,4 +9,6 @@ class TargetDto implements TargetDtoInterface
     public string $foo;
 
     public string $bar;
+
+    public string $baz;
 }
