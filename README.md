@@ -165,8 +165,9 @@ name=John+Doe&email=john@example.com&tags[]=developer&tags[]=php
 
 ### Custom Field Mapping
 
-You can map request fields to different DTO properties using the `lookupKey` option:
+You can map request fields to different DTO properties using the `lookupKey` option. This works for both `application/json` and `application/x-www-form-urlencoded` requests.
 
+**Form Type Configuration:**
 ```php
 public function buildForm(FormBuilderInterface $builder, array $options): void
 {
@@ -175,8 +176,19 @@ public function buildForm(FormBuilderInterface $builder, array $options): void
     ]);
 }
 ```
-
 This will map the `user-id` request field to the `userId` DTO property.
+
+**JSON Request Example:**
+```http
+POST /api/some-endpoint
+Content-Type: application/json
+
+{
+    "user-id": 123,
+    "name": "John Doe"
+}
+```
+In this example, the value `123` from `user-id` will be mapped to the `userId` property of your DTO.
 
 ### Header Fallback
 

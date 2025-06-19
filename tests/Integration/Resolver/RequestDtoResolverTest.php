@@ -150,4 +150,28 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
 
         $this->requestDtoResolver->resolve($request, $argumentMock);
     }
+
+    public function testLookupKeyWorksWithJsonRequest(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $jsonData = json_encode([
+            'foo' => 'json_foo',
+            'bar' => 'json_bar',
+            'Baz-key' => 'value_from_lookup_key',
+        ]);
+
+        $request = new Request(
+            attributes: ['_controller' => Controller::class],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $jsonData
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+        $dto = $resolved[0];
+
+        $this->assertInstanceOf(TargetDto::class, $dto);
+        $this->assertSame('value_from_lookup_key', $dto->baz);
+    }
 }

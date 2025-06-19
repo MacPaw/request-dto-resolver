@@ -158,4 +158,33 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
         $this->assertEquals(25, $dto->age);
         $this->assertEquals(['developer', 'php'], $dto->tags);
     }
+
+    public function testExtraFieldsInJsonAreIgnored(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(ComplexDto::class);
+
+        $jsonData = json_encode([
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'age' => 25,
+            'tags' => ['developer'],
+            'extra_field' => 'should_be_ignored',
+            'another_extra' => ['foo' => 'bar'],
+        ]);
+
+        $request = new Request(
+            attributes: ['_controller' => ComplexController::class],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $jsonData
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+        $dto = $resolved[0];
+
+        $this->assertInstanceOf(ComplexDto::class, $dto);
+        $this->assertEquals('John Doe', $dto->name);
+        $this->assertObjectNotHasProperty('extra_field', $dto);
+        $this->assertObjectNotHasProperty('another_extra', $dto);
+    }
 }

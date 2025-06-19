@@ -43,24 +43,24 @@ readonly class RequestDtoResolver implements ValueResolverInterface
         $formType = $this->resolveFormType($request, $dtoClass);
         $form = $this->formFactory->create($formType);
 
-        if ($format === 'form' || !empty($request->request->all())) {
-            $data = [];
-            foreach ($form->all() as $key => $value) {
-                $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
-                $data[$key] = $request->get($lookupKey);
-                if ($data[$key] === null) {
-                    $data[$key] = $request->headers->get($lookupKey);
-                }
-            }
-            $form->submit($data);
-        } else {
+        if ($format !== 'form' && empty($request->request->all())) {
             try {
-                $data = $this->decoder->decode($request->getContent(), $format);
-                $form->submit($data);
+                $data = (array) $this->decoder->decode($request->getContent(), $format);
+                $request->request->add($data);
             } catch (NotEncodableValueException $e) {
-                throw new BadRequestHttpException('Malformed request body.');
+                throw new BadRequestHttpException('Malformed request body.', $e);
             }
         }
+        
+        $params = [];
+        foreach ($form->all() as $key => $value) {
+            $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
+            $params[$key] = $request->get($lookupKey);
+            if ($params[$key] === null) {
+                $params[$key] = $request->headers->get($lookupKey);
+            }
+        }
+        $form->submit($params);
 
         if (!$form->isValid()) {
             $constraintViolationList = new ConstraintViolationList();
