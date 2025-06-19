@@ -51,7 +51,7 @@ readonly class RequestDtoResolver implements ValueResolverInterface
                 throw new BadRequestHttpException('Malformed request body.', $e);
             }
         }
-        
+
         $params = [];
         foreach ($form->all() as $key => $value) {
             $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
