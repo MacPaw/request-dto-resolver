@@ -4,23 +4,30 @@ declare(strict_types=1);
 
 namespace RequestDtoResolver\Resolver;
 
-use ReflectionClass;
 use RequestDtoResolver\Attribute\FormType;
 use RequestDtoResolver\Exception\InvalidParamsDtoException;
 use RequestDtoResolver\Exception\MissingFormTypeAttributeException;
-use Symfony\Component\Form\AbstractType as FormAbstractType;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
+use Symfony\Component\Serializer\Exception\NotEncodableValueException;
+use Symfony\Component\Serializer\Encoder\DecoderInterface;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
+use ReflectionClass;
 
 readonly class RequestDtoResolver implements ValueResolverInterface
 {
+    private const SUPPORTED_FORMATS = ['json', 'form'];
+
     public function __construct(
         private FormFactoryInterface $formFactory,
-        private string $targetDtoInterface,
+        private DecoderInterface $decoder,
+        private string $targetDtoInterface
     ) {
     }
 
@@ -32,11 +39,18 @@ readonly class RequestDtoResolver implements ValueResolverInterface
             return [];
         }
 
-        $formType = is_subclass_of($dtoClass, FormAbstractType::class)
-            ? $dtoClass
-            : $this->getFormTypeFromReflection($request);
-
+        $format = $this->resolveFormat($request);
+        $formType = $this->resolveFormType($request, $dtoClass);
         $form = $this->formFactory->create($formType);
+
+        if ($format !== 'form' && empty($request->request->all())) {
+            try {
+                $data = (array) $this->decoder->decode($request->getContent(), $format);
+                $request->request->add($data);
+            } catch (NotEncodableValueException $e) {
+                throw new BadRequestHttpException('Malformed request body.', $e);
+            }
+        }
 
         $params = [];
         foreach ($form->all() as $key => $value) {
@@ -46,7 +60,6 @@ readonly class RequestDtoResolver implements ValueResolverInterface
                 $params[$key] = $request->headers->get($lookupKey);
             }
         }
-
         $form->submit($params);
 
         if (!$form->isValid()) {
@@ -64,8 +77,36 @@ readonly class RequestDtoResolver implements ValueResolverInterface
         return [$form->getData()];
     }
 
-    private function getFormTypeFromReflection(Request $request): string
+    private function resolveFormat(Request $request): string
     {
+        // If request data is already parsed, use form format
+        if (!empty($request->request->all())) {
+            return 'form';
+        }
+
+        $contentType = $request->headers->get('Content-Type');
+
+        if (!$contentType) {
+            return 'form'; // fallback
+        }
+
+        $format = $request->getFormat($contentType);
+
+        if (!in_array($format, self::SUPPORTED_FORMATS, true)) {
+            throw new UnsupportedMediaTypeHttpException(
+                sprintf("Unsupported format: %s", $format)
+            );
+        }
+
+        return $format;
+    }
+
+    private function resolveFormType(Request $request, string $dtoClass): string
+    {
+        if (is_subclass_of($dtoClass, FormTypeInterface::class)) {
+            return $dtoClass;
+        }
+
         /** @var string $controllerClass */
         $controllerClass = $request->attributes->get('_controller');
 
@@ -73,7 +114,7 @@ readonly class RequestDtoResolver implements ValueResolverInterface
 
         $attributes = $reflection->getMethod('__invoke')->getAttributes(FormType::class);
 
-        if (count($attributes) <= 0) {
+        if (count($attributes) === 0) {
             throw new MissingFormTypeAttributeException($controllerClass);
         }
 

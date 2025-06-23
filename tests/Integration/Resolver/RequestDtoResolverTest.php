@@ -15,6 +15,7 @@ use RequestDtoResolver\Tests\Fixture\TargetDtoInterface;
 use stdClass;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class RequestDtoResolverTest extends AbstractKernelTestCase
 {
@@ -129,5 +130,48 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
 
         $this->assertInstanceOf(TargetDtoInterface::class, $resolved[0]);
+    }
+
+    public function testThrowsExceptionOnInvalidJson(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $invalidJsonData = '{"foo": "bar",}';
+
+        $request = new Request(
+            attributes: ['_controller' => Controller::class],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $invalidJsonData
+        );
+
+        $this->expectException(BadRequestHttpException::class);
+        $this->expectExceptionMessage('Malformed request body.');
+
+        $this->requestDtoResolver->resolve($request, $argumentMock);
+    }
+
+    public function testLookupKeyWorksWithJsonRequest(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $jsonData = json_encode([
+            'foo' => 'json_foo',
+            'bar' => 'json_bar',
+            'Baz-key' => 'value_from_lookup_key',
+        ]);
+
+        $request = new Request(
+            attributes: ['_controller' => Controller::class],
+            server: ['CONTENT_TYPE' => 'application/json'],
+            content: $jsonData
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+        $dto = $resolved[0];
+
+        $this->assertInstanceOf(TargetDto::class, $dto);
+        $this->assertSame('value_from_lookup_key', $dto->baz);
     }
 }
