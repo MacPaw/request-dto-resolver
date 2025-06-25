@@ -10,7 +10,7 @@ use Attribute;
 class FormType
 {
     public function __construct(
-        private readonly string $class = '',
+        private string $class = '',
     ) {
     }
 
