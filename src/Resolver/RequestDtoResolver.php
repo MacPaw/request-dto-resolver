@@ -20,7 +20,7 @@ use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
 use ReflectionClass;
 
-readonly class RequestDtoResolver implements ValueResolverInterface
+class RequestDtoResolver implements ValueResolverInterface
 {
     private const SUPPORTED_FORMATS = ['json', 'form'];
 
@@ -42,11 +42,15 @@ readonly class RequestDtoResolver implements ValueResolverInterface
         $format = $this->resolveFormat($request);
         $formType = $this->resolveFormType($request, $dtoClass);
         $form = $this->formFactory->create($formType);
+        $data = [];
 
-        if ($format !== 'form' && empty($request->request->all())) {
+        if (
+            !$request->isMethod(Request::METHOD_GET)
+            && $format !== 'form'
+            && count($request->request->all()) === 0
+        ) {
             try {
                 $data = (array) $this->decoder->decode($request->getContent(), $format);
-                $request->request->add($data);
             } catch (NotEncodableValueException $e) {
                 throw new BadRequestHttpException('Malformed request body.', $e);
             }
@@ -55,7 +59,7 @@ readonly class RequestDtoResolver implements ValueResolverInterface
         $params = [];
         foreach ($form->all() as $key => $value) {
             $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
-            $params[$key] = $request->get($lookupKey);
+            $params[$key] = $data[$lookupKey] ?? $request->get($lookupKey);
             if ($params[$key] === null) {
                 $params[$key] = $request->headers->get($lookupKey);
             }
@@ -80,7 +84,7 @@ readonly class RequestDtoResolver implements ValueResolverInterface
     private function resolveFormat(Request $request): string
     {
         // If request data is already parsed, use form format
-        if (!empty($request->request->all())) {
+        if (count($request->request->all()) > 0) {
             return 'form';
         }
 

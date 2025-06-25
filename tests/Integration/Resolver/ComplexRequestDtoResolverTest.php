@@ -36,7 +36,7 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => ComplexController::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: $jsonData
         );
 
@@ -64,7 +64,7 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => ComplexController::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: $jsonData
         );
 
@@ -79,7 +79,7 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => ComplexController::class],
-            server: ['CONTENT_TYPE' => 'application/yaml']
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/yaml']
         );
 
         $this->expectException(UnsupportedMediaTypeHttpException::class);
@@ -100,7 +100,7 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => ComplexController::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: $jsonData
         );
 
@@ -144,7 +144,7 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
                 'tags' => ['developer', 'php']
             ],
             attributes: ['_controller' => ComplexController::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: '{"name": "Wrong Name", "email": "wrong@example.com", "age": 99, "tags": ["wrong"]}'
         );
 
@@ -175,7 +175,7 @@ class ComplexRequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => ComplexController::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: $jsonData
         );
 
