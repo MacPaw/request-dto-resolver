@@ -18,6 +18,7 @@ use Symfony\Component\Serializer\Encoder\DecoderInterface;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
 use ReflectionClass;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class RequestDtoResolver implements ValueResolverInterface
 {
@@ -44,6 +45,7 @@ class RequestDtoResolver implements ValueResolverInterface
         $formType = $this->resolveFormType($request, $dtoClass);
         $form = $this->formFactory->create($formType);
         $content = $request->getContent();
+        $data = [];
 
         if (
             is_string($content)
@@ -52,8 +54,11 @@ class RequestDtoResolver implements ValueResolverInterface
         ) {
             try {
                 $data = (array) $this->decoder->decode($content, $format);
-            } catch (NotEncodableValueException) {
-                $data = [];
+            } catch (NotEncodableValueException $e) {
+                throw new BadRequestHttpException(
+                    sprintf('Invalid %s format', strtoupper($format)),
+                    $e
+                );
             }
         }
 

@@ -15,6 +15,7 @@ use RequestDtoResolver\Tests\Fixture\TargetDtoInterface;
 use stdClass;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class RequestDtoResolverTest extends AbstractKernelTestCase
 {
@@ -131,7 +132,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $this->assertInstanceOf(TargetDtoInterface::class, $resolved[0]);
     }
 
-    public function testInvalidJsonTriggersFormValidation(): void
+    public function testThrowsExceptionOnInvalidJson(): void
     {
         $argumentMock = $this->createMock(ArgumentMetadata::class);
         $argumentMock->method('getType')->willReturn(TargetDto::class);
@@ -144,15 +145,10 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
             content: $invalidJsonData
         );
 
-        $this->expectException(InvalidParamsDtoException::class);
+        $this->expectException(BadRequestHttpException::class);
+        $this->expectExceptionMessage('Invalid JSON format');
 
-        try {
-            $this->requestDtoResolver->resolve($request, $argumentMock);
-        } catch (InvalidParamsDtoException $e) {
-            $this->assertSame(TargetDto::class, $e->getDtoClassName());
-            $this->assertGreaterThan(0, $e->getList()->count());
-            throw $e;
-        }
+        $this->requestDtoResolver->resolve($request, $argumentMock);
     }
 
     public function testEmptyJsonBodyTriggersFormValidation(): void
