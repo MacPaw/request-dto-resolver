@@ -12,7 +12,6 @@ use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\Serializer\Exception\NotEncodableValueException;
 use Symfony\Component\Serializer\Encoder\DecoderInterface;
@@ -22,7 +21,9 @@ use ReflectionClass;
 
 class RequestDtoResolver implements ValueResolverInterface
 {
-    private const SUPPORTED_FORMATS = ['json', 'form'];
+    private const FORMAT_FORM = 'form';
+    private const FORMAT_JSON = 'json';
+    private const SUPPORTED_FORMATS = [self::FORMAT_JSON, self::FORMAT_FORM];
 
     public function __construct(
         private FormFactoryInterface $formFactory,
@@ -42,17 +43,17 @@ class RequestDtoResolver implements ValueResolverInterface
         $format = $this->resolveFormat($request);
         $formType = $this->resolveFormType($request, $dtoClass);
         $form = $this->formFactory->create($formType);
-        $data = [];
+        $content = $request->getContent();
 
         if (
-            !$request->isMethod(Request::METHOD_GET)
-            && $format !== 'form'
-            && count($request->request->all()) === 0
+            is_string($content)
+            && $content !== ''
+            && $this->decoder->supportsDecoding($format)
         ) {
             try {
-                $data = (array) $this->decoder->decode($request->getContent(), $format);
-            } catch (NotEncodableValueException $e) {
-                throw new BadRequestHttpException('Malformed request body.', $e);
+                $data = (array) $this->decoder->decode($content, $format);
+            } catch (NotEncodableValueException) {
+                $data = [];
             }
         }
 
@@ -85,13 +86,13 @@ class RequestDtoResolver implements ValueResolverInterface
     {
         // If request data is already parsed, use form format
         if (count($request->request->all()) > 0) {
-            return 'form';
+            return self::FORMAT_FORM;
         }
 
         $contentType = $request->headers->get('Content-Type');
 
         if (!$contentType) {
-            return 'form'; // fallback
+            return self::FORMAT_FORM; // fallback
         }
 
         $format = $request->getFormat($contentType);

@@ -8,7 +8,7 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 class InvalidParamsDtoException extends InvalidParamsException
 {
-    private readonly string $dtoClassName;
+    private string $dtoClassName;
 
     public function __construct(ConstraintViolationListInterface $list, string $dtoClassName)
     {

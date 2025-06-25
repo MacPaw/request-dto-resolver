@@ -15,7 +15,6 @@ use RequestDtoResolver\Tests\Fixture\TargetDtoInterface;
 use stdClass;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class RequestDtoResolverTest extends AbstractKernelTestCase
 {
@@ -132,7 +131,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $this->assertInstanceOf(TargetDtoInterface::class, $resolved[0]);
     }
 
-    public function testThrowsExceptionOnInvalidJson(): void
+    public function testInvalidJsonTriggersFormValidation(): void
     {
         $argumentMock = $this->createMock(ArgumentMetadata::class);
         $argumentMock->method('getType')->willReturn(TargetDto::class);
@@ -145,10 +144,37 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
             content: $invalidJsonData
         );
 
-        $this->expectException(BadRequestHttpException::class);
-        $this->expectExceptionMessage('Malformed request body.');
+        $this->expectException(InvalidParamsDtoException::class);
 
-        $this->requestDtoResolver->resolve($request, $argumentMock);
+        try {
+            $this->requestDtoResolver->resolve($request, $argumentMock);
+        } catch (InvalidParamsDtoException $e) {
+            $this->assertSame(TargetDto::class, $e->getDtoClassName());
+            $this->assertGreaterThan(0, $e->getList()->count());
+            throw $e;
+        }
+    }
+
+    public function testEmptyJsonBodyTriggersFormValidation(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $request = new Request(
+            attributes: ['_controller' => Controller::class],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
+            content: ''
+        );
+
+        $this->expectException(InvalidParamsDtoException::class);
+
+        try {
+            $this->requestDtoResolver->resolve($request, $argumentMock);
+        } catch (InvalidParamsDtoException $e) {
+            $this->assertSame(TargetDto::class, $e->getDtoClassName());
+            $this->assertGreaterThan(0, $e->getList()->count());
+            throw $e;
+        }
     }
 
     public function testLookupKeyWorksWithJsonRequest(): void
