@@ -1,16 +1,15 @@
 # Symfony Request DTO Resolver Bundle
 
-Automatically resolves Symfony HTTP request data into DTOs with validation support. Handles both JSON and form-data requests seamlessly.
+Automatically resolves and validates Symfony HTTP request data (JSON, form-data, query parameters) into DTOs.
 
 ## Features
 
-- Automatic request data resolution into DTOs
-- Support for both JSON and form-data requests
-- Built-in validation using Symfony Forms
-- Nested data structures support
-- Fallback to request headers
-- Custom field mapping via lookup keys
-- Smart integration with other bundles that parse request body
+- Automatic resolution of request data into DTOs.
+- Seamless support for JSON, form-data, and query string parameters.
+- Built-in validation using the Symfony Form component.
+- Support for complex nested data structures.
+- Customizable parameter resolution order and field mapping.
+- Smart integration with other bundles that parse the request body.
 
 ## Installation
 
@@ -18,30 +17,22 @@ Automatically resolves Symfony HTTP request data into DTOs with validation suppo
 composer require macpaw/request-dto-resolver
 ```
 
-The bundle should be automatically registered in your `config/bundles.php`:
+The bundle should be automatically registered in your `config/bundles.php`. If not, add it manually:
 
 ```php
+// config/bundles.php
 return [
     RequestDtoResolver\RequestDtoResolverBundle::class => ['all' => true],
     // ...
 ];
 ```
 
-If your application doesn't use Symfony Flex, add the bundle manually.
-
 ## Configuration
 
-Create the configuration file:
-
-```yaml
-# config/packages/request_dto_resolver.yaml
-request_dto_resolver:
-    target_dto_interface: App\DTO\RequestDtoInterface
-```
-
-Create the DTO interface:
+First, define an interface that your DTOs will implement. This allows the resolver to identify which arguments to process.
 
 ```php
+// src/DTO/RequestDtoInterface.php
 namespace App\DTO;
 
 interface RequestDtoInterface
@@ -49,11 +40,32 @@ interface RequestDtoInterface
 }
 ```
 
+Then, point the bundle to this interface in a configuration file:
+
+```yaml
+# config/packages/request_dto_resolver.yaml
+request_dto_resolver:
+    target_dto_interface: App\DTO\RequestDtoInterface
+```
+
+## How It Works
+
+The resolver uses a combination of a DTO class and a Symfony Form to process and validate incoming request data.
+
+1.  **Controller Argument**: You type-hint a controller argument with your DTO class (e.g., `UserDto`).
+2.  **FormType Attribute**: You decorate the controller action with the `#[FormType]` attribute, specifying which Symfony Form to use for processing.
+3.  **Data Resolution**: The resolver extracts data from the request based on the form's fields.
+4.  **Validation**: The form validates the data against the constraints defined in your DTO.
+5.  **DTO Hydration**: If validation passes, a new DTO instance is created and populated with the validated data.
+
 ## Usage
 
 ### 1. Create a DTO
 
+The DTO is a simple PHP class that implements your marker interface. Use Symfony's Validator components to define constraints.
+
 ```php
+// src/DTO/UserDto.php
 namespace App\DTO;
 
 use Symfony\Component\Validator\Constraints as Assert;
@@ -80,7 +92,10 @@ class UserDto implements RequestDtoInterface
 
 ### 2. Create a Form Type
 
+The Form Type defines the structure of the expected request data and maps it to your DTO.
+
 ```php
+// src/Form/UserFormType.php
 namespace App\Form;
 
 use App\DTO\UserDto;
@@ -100,22 +115,25 @@ class UserFormType extends AbstractType
             ->add('email', EmailType::class)
             ->add('tags', CollectionType::class, [
                 'entry_type' => TextType::class,
-                'allow_add' => true
+                'allow_add' => true,
             ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => UserDto::class
+            'data_class' => UserDto::class,
         ]);
     }
 }
 ```
 
-### 3. Create a Controller
+### 3. Use in a Controller
+
+In your controller, type-hint the action argument with your DTO class and add the `#[FormType]` attribute.
 
 ```php
+// src/Controller/UserController.php
 namespace App\Controller;
 
 use App\DTO\UserDto;
@@ -128,113 +146,84 @@ class UserController
     #[FormType(UserFormType::class)]
     public function __invoke(UserDto $dto): JsonResponse
     {
+        // $dto is now a validated and populated object
         return new JsonResponse([
             'name' => $dto->name,
             'email' => $dto->email,
-            'tags' => $dto->tags
+            'tags' => $dto->tags,
         ]);
     }
 }
 ```
 
-## Request Examples
+## Parameter Resolution
 
-### JSON Request
+The resolver automatically extracts data from the request to populate the form. The source of the data depends on the request's `Content-Type` header and method.
 
-```http
-POST /api/user
-Content-Type: application/json
+### Resolution Order
 
-{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "tags": ["developer", "php"]
-}
-```
+For each field defined in your Form Type, the resolver searches for a corresponding value in the following order:
 
-### Form Data Request
+1.  **JSON Body**: If the request has a `Content-Type` of `application/json`, the decoded JSON body is checked first.
+2.  **Query & Form Data**: The resolver then checks `request->query` (for `GET` parameters) and `request->request` (for `POST` form data).
+3.  **Request Headers**: Finally, it checks the request headers.
 
-```http
-POST /api/user
-Content-Type: application/x-www-form-urlencoded
+This order means that for a `POST` request with both a JSON body and query parameters, the values in the **JSON body will take precedence**.
 
-name=John+Doe&email=john@example.com&tags[]=developer&tags[]=php
-```
+### Common Scenarios
+
+-   **POST with JSON Body**: `{"name": "John"}` -> `name` is resolved from JSON.
+-   **POST with Form Data**: `name=John` -> `name` is resolved from form data.
+-   **GET with Query Parameters**: `?name=John` -> `name` is resolved from query string.
+-   **GET with `Content-Type: application/json`**: The resolver will correctly ignore the header and still pull data from the query string, preventing malformed body errors.
+-   **Request without `Content-Type`**: The request is treated as a standard form/query request, and data is resolved from the query string.
 
 ## Advanced Features
 
 ### Custom Field Mapping
 
-You can map request fields to different DTO properties using the `lookupKey` option. This works for both `application/json` and `application/x-www-form-urlencoded` requests.
+You can map request fields to different DTO properties using the `lookupKey` option in your Form Type. This is useful for handling request keys that don't match your DTO property names (e.g., `user-id` vs. `userId`).
 
 **Form Type Configuration:**
-```php
-public function buildForm(FormBuilderInterface $builder, array $options): void
-{
-    $builder->add('userId', TextType::class, [
-        'attr' => ['lookupKey' => 'user-id']
-    ]);
-}
-```
-This will map the `user-id` request field to the `userId` DTO property.
 
-**JSON Request Example:**
+```php
+// ...
+$builder->add('userId', TextType::class, [
+    'attr' => ['lookupKey' => 'user-id'],
+]);
+// ...
+```
+
+This configuration will map the `user-id` key from any source (JSON body, query, or header) to the `userId` form field.
+
+**Request Example:**
+
 ```http
 POST /api/some-endpoint
 Content-Type: application/json
 
 {
-    "user-id": 123,
-    "name": "John Doe"
-}
-```
-In this example, the value `123` from `user-id` will be mapped to the `userId` property of your DTO.
-
-### Header Fallback
-
-If a field is not found in the request data, the resolver will look for it in the request headers:
-
-```http
-POST /api/user
-Content-Type: application/json
-X-User-Id: 12345
-
-{
-    "name": "John Doe"
+    "user-id": 123
 }
 ```
 
 ## Integration with Other Bundles
 
-This bundle is designed to work seamlessly with other bundles that parse request body (like FOSRestBundle). When the request body is already parsed into `$request->request`:
-
-1. The resolver automatically detects this
-2. Uses the pre-parsed data instead of parsing the raw body again
-3. Applies the same validation and mapping rules
+This bundle is designed to work seamlessly with other bundles that parse the request body (e.g., FOSRestBundle). If the request body is already parsed and populated in `$request->request`, the resolver will automatically use this pre-parsed data instead of reading the raw body again.
 
 This ensures:
-- No double parsing of request body
-- Consistent behavior across different bundles
-- No configuration needed
-
-For example, with FOSRestBundle:
-```yaml
-# Both bundles will work together automatically
-fos_rest:
-    body_listener: true
-    format_listener:
-        rules:
-            - { path: '^/api', priorities: ['json'] }
-```
+-   No double-parsing of the request body.
+-   Consistent validation and mapping rules.
+-   Zero-configuration interoperability.
 
 ## Error Handling
 
-The bundle throws:
+The bundle throws the following exceptions, which you can handle with a standard Symfony exception listener:
 
-- `InvalidParamsDtoException` for validation errors
-- `BadRequestHttpException` for malformed request body
-- `UnsupportedMediaTypeHttpException` for unsupported content types
-- `MissingFormTypeAttributeException` when the FormType attribute is missing
+-   `InvalidParamsDtoException`: For validation errors (contains a `ConstraintViolationList`).
+-   `BadRequestHttpException`: For a malformed JSON body.
+-   `UnsupportedMediaTypeHttpException`: For an unsupported `Content-Type`.
+-   `MissingFormTypeAttributeException`: When the `#[FormType]` attribute is missing on the controller action.
 
 ## Contributing
 

@@ -9,7 +9,7 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 class InvalidParamsException extends Exception
 {
-    private readonly ConstraintViolationListInterface $list;
+    private ConstraintViolationListInterface $list;
 
     public function __construct(ConstraintViolationListInterface $list)
     {
