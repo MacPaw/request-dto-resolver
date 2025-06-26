@@ -12,17 +12,19 @@ use Symfony\Component\Form\FormTypeInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\UnsupportedMediaTypeHttpException;
 use Symfony\Component\Serializer\Exception\NotEncodableValueException;
 use Symfony\Component\Serializer\Encoder\DecoderInterface;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\ConstraintViolationList;
 use ReflectionClass;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
-readonly class RequestDtoResolver implements ValueResolverInterface
+class RequestDtoResolver implements ValueResolverInterface
 {
-    private const SUPPORTED_FORMATS = ['json', 'form'];
+    private const FORMAT_FORM = 'form';
+    private const FORMAT_JSON = 'json';
+    private const SUPPORTED_FORMATS = [self::FORMAT_JSON, self::FORMAT_FORM];
 
     public function __construct(
         private FormFactoryInterface $formFactory,
@@ -42,20 +44,28 @@ readonly class RequestDtoResolver implements ValueResolverInterface
         $format = $this->resolveFormat($request);
         $formType = $this->resolveFormType($request, $dtoClass);
         $form = $this->formFactory->create($formType);
+        $content = $request->getContent();
+        $data = [];
 
-        if ($format !== 'form' && empty($request->request->all())) {
+        if (
+            is_string($content)
+            && $content !== ''
+            && $this->decoder->supportsDecoding($format)
+        ) {
             try {
-                $data = (array) $this->decoder->decode($request->getContent(), $format);
-                $request->request->add($data);
+                $data = (array) $this->decoder->decode($content, $format);
             } catch (NotEncodableValueException $e) {
-                throw new BadRequestHttpException('Malformed request body.', $e);
+                throw new BadRequestHttpException(
+                    sprintf('Invalid %s format', strtoupper($format)),
+                    $e
+                );
             }
         }
 
         $params = [];
         foreach ($form->all() as $key => $value) {
             $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
-            $params[$key] = $request->get($lookupKey);
+            $params[$key] = $data[$lookupKey] ?? $request->get($lookupKey);
             if ($params[$key] === null) {
                 $params[$key] = $request->headers->get($lookupKey);
             }
@@ -80,14 +90,14 @@ readonly class RequestDtoResolver implements ValueResolverInterface
     private function resolveFormat(Request $request): string
     {
         // If request data is already parsed, use form format
-        if (!empty($request->request->all())) {
-            return 'form';
+        if (count($request->request->all()) > 0) {
+            return self::FORMAT_FORM;
         }
 
         $contentType = $request->headers->get('Content-Type');
 
         if (!$contentType) {
-            return 'form'; // fallback
+            return self::FORMAT_FORM; // fallback
         }
 
         $format = $request->getFormat($contentType);

@@ -141,14 +141,36 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => Controller::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: $invalidJsonData
         );
 
         $this->expectException(BadRequestHttpException::class);
-        $this->expectExceptionMessage('Malformed request body.');
+        $this->expectExceptionMessage('Invalid JSON format');
 
         $this->requestDtoResolver->resolve($request, $argumentMock);
+    }
+
+    public function testEmptyJsonBodyTriggersFormValidation(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $request = new Request(
+            attributes: ['_controller' => Controller::class],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
+            content: ''
+        );
+
+        $this->expectException(InvalidParamsDtoException::class);
+
+        try {
+            $this->requestDtoResolver->resolve($request, $argumentMock);
+        } catch (InvalidParamsDtoException $e) {
+            $this->assertSame(TargetDto::class, $e->getDtoClassName());
+            $this->assertGreaterThan(0, $e->getList()->count());
+            throw $e;
+        }
     }
 
     public function testLookupKeyWorksWithJsonRequest(): void
@@ -164,7 +186,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
 
         $request = new Request(
             attributes: ['_controller' => Controller::class],
-            server: ['CONTENT_TYPE' => 'application/json'],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
             content: $jsonData
         );
 
@@ -173,5 +195,75 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
 
         $this->assertInstanceOf(TargetDto::class, $dto);
         $this->assertSame('value_from_lookup_key', $dto->baz);
+    }
+
+    public function testResolvesGetRequestWithJsonContentTypeAndQueryParameters(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $request = new Request(
+            query: ['foo' => 'abc', 'bar' => 'def', 'Baz-key' => 'ghi'],
+            attributes: ['_controller' => Controller::class],
+            server: ['REQUEST_METHOD' => 'GET', 'CONTENT_TYPE' => 'application/json']
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+
+        $this->assertCount(1, $resolved);
+        $this->assertInstanceOf(TargetDto::class, $resolved[0]);
+        /** @var TargetDto $dto */
+        $dto = $resolved[0];
+        $this->assertSame('abc', $dto->foo);
+        $this->assertSame('def', $dto->bar);
+        $this->assertSame('ghi', $dto->baz);
+    }
+
+    public function testJsonBodyTakesPrecedenceOverQuery(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $jsonData = json_encode([
+            'foo' => 'from_body',
+            'bar' => 'from_body',
+        ]);
+
+        $request = new Request(
+            query: ['foo' => 'from_query', 'Baz-key' => 'from_query'],
+            attributes: ['_controller' => Controller::class],
+            server: ['REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json'],
+            content: $jsonData
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+
+        $this->assertCount(1, $resolved);
+        /** @var TargetDto $dto */
+        $dto = $resolved[0];
+        $this->assertSame('from_body', $dto->foo);
+        $this->assertSame('from_body', $dto->bar);
+        $this->assertSame('from_query', $dto->baz);
+    }
+
+    public function testResolvesWithQueryParametersAndNoContentType(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $request = new Request(
+            query: ['foo' => 'abc', 'bar' => 'def', 'Baz-key' => 'ghi'],
+            attributes: ['_controller' => Controller::class],
+            server: ['REQUEST_METHOD' => 'POST']
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+
+        $this->assertCount(1, $resolved);
+        /** @var TargetDto $dto */
+        $dto = $resolved[0];
+        $this->assertSame('abc', $dto->foo);
+        $this->assertSame('def', $dto->bar);
+        $this->assertSame('ghi', $dto->baz);
     }
 }
