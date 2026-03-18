@@ -62,10 +62,13 @@ class RequestDtoResolver implements ValueResolverInterface
             }
         }
 
+        $queryAll = $request->query->all();
+        $requestAll = $request->request->all();
+
         $params = [];
         foreach ($form->all() as $key => $value) {
             $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
-            $params[$key] = $data[$lookupKey] ?? $request->get($lookupKey);
+            $params[$key] = $data[$lookupKey] ?? $queryAll[$lookupKey] ?? $requestAll[$lookupKey] ?? null;
             if ($params[$key] === null) {
                 $params[$key] = $request->headers->get($lookupKey);
             }

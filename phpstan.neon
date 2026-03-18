@@ -3,8 +3,3 @@ parameters:
     paths:
         - src
         - tests
-    ignoreErrors:
-        -
-            message: '~Call to an undefined method Symfony\\Component\\Config\\Definition\\Builder\\NodeDefinition::children\(\).~'
-            count: 1
-            path: ./src/DependencyInjection
