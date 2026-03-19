@@ -23,7 +23,9 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 class RequestDtoResolver implements ValueResolverInterface
 {
     private const FORMAT_FORM = 'form';
+
     private const FORMAT_JSON = 'json';
+
     private const SUPPORTED_FORMATS = [self::FORMAT_JSON, self::FORMAT_FORM];
 
     public function __construct(
@@ -48,8 +50,7 @@ class RequestDtoResolver implements ValueResolverInterface
         $data = [];
 
         if (
-            is_string($content)
-            && $content !== ''
+            $content !== ''
             && $this->decoder->supportsDecoding($format)
         ) {
             try {
@@ -73,6 +74,7 @@ class RequestDtoResolver implements ValueResolverInterface
                 $params[$key] = $request->headers->get($lookupKey);
             }
         }
+
         $form->submit($params);
 
         if (!$form->isValid()) {
@@ -93,7 +95,7 @@ class RequestDtoResolver implements ValueResolverInterface
     private function resolveFormat(Request $request): string
     {
         // If request data is already parsed, use form format
-        if (count($request->request->all()) > 0) {
+        if ($request->request->all() !== []) {
             return self::FORMAT_FORM;
         }
 
