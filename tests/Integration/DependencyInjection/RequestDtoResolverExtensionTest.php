@@ -15,7 +15,7 @@ class RequestDtoResolverExtensionTest extends TestCase
     {
         $configs = [
             'request_dto_resolver' => [
-                'target_dto_interface' => 'RequestDtoResolver\Tests\Fixture\TargetDtoInterface',
+                'target_dto_interface' => \RequestDtoResolver\Tests\Fixture\TargetDtoInterface::class,
             ],
         ];
 

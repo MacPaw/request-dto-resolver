@@ -21,7 +21,7 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
 {
     private RequestDtoResolver $requestDtoResolver;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         $this->requestDtoResolver = self::getContainer()->get(RequestDtoResolver::class);
     }
@@ -166,10 +166,10 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
 
         try {
             $this->requestDtoResolver->resolve($request, $argumentMock);
-        } catch (InvalidParamsDtoException $e) {
-            $this->assertSame(TargetDto::class, $e->getDtoClassName());
-            $this->assertGreaterThan(0, $e->getList()->count());
-            throw $e;
+        } catch (InvalidParamsDtoException $invalidParamsDtoException) {
+            $this->assertSame(TargetDto::class, $invalidParamsDtoException->getDtoClassName());
+            $this->assertGreaterThan(0, $invalidParamsDtoException->getList()->count());
+            throw $invalidParamsDtoException;
         }
     }
 
