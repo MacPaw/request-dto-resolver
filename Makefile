@@ -3,6 +3,7 @@ SHELL := /bin/bash
 .PHONY: phpunit phpstan phpcs cs-fix rector validate
 
 phpunit:
+	rm -rf var/cache/test
 	composer phpunit
 
 phpstan:

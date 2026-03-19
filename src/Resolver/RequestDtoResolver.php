@@ -48,8 +48,7 @@ class RequestDtoResolver implements ValueResolverInterface
         $data = [];
 
         if (
-            is_string($content)
-            && $content !== ''
+            $content !== ''
             && $this->decoder->supportsDecoding($format)
         ) {
             try {
