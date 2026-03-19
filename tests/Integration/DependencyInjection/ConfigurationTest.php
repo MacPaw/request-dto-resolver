@@ -13,7 +13,7 @@ class ConfigurationTest extends TestCase
     public function testConfiguration(): void
     {
         $expectedConfig = [
-            'target_dto_interface' => 'RequestDtoResolver\Tests\Fixture\TargetDtoInterface',
+            'target_dto_interface' => \RequestDtoResolver\Tests\Fixture\TargetDtoInterface::class,
         ];
 
         $processor = new Processor();
