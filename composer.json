@@ -20,6 +20,7 @@
         "escapestudios/symfony2-coding-standard": "^3.18",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^12.5",
+        "rector/rector": "^2.3",
         "roave/backward-compatibility-check": "^8.19",
         "slevomat/coding-standard": "^8.28",
         "squizlabs/php_codesniffer": "^4.0",
