@@ -266,4 +266,50 @@ class RequestDtoResolverTest extends AbstractKernelTestCase
         $this->assertSame('def', $dto->bar);
         $this->assertSame('ghi', $dto->baz);
     }
+
+    public function testResolvesParametersFromRouteAttributes(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $request = new Request(
+            attributes: [
+                '_controller' => Controller::class,
+                'foo' => 'from_route',
+                'bar' => 'from_route_bar',
+                'Baz-key' => 'from_route_baz',
+            ]
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+
+        $this->assertCount(1, $resolved);
+        /** @var TargetDto $dto */
+        $dto = $resolved[0];
+        $this->assertSame('from_route', $dto->foo);
+        $this->assertSame('from_route_bar', $dto->bar);
+        $this->assertSame('from_route_baz', $dto->baz);
+    }
+
+    public function testRouteAttributesTakePrecedenceOverQuery(): void
+    {
+        $argumentMock = $this->createMock(ArgumentMetadata::class);
+        $argumentMock->method('getType')->willReturn(TargetDto::class);
+
+        $request = new Request(
+            query: ['foo' => 'from_query', 'bar' => 'from_query', 'Baz-key' => 'from_query'],
+            attributes: [
+                '_controller' => Controller::class,
+                'foo' => 'from_route',
+            ]
+        );
+
+        $resolved = $this->requestDtoResolver->resolve($request, $argumentMock);
+
+        /** @var TargetDto $dto */
+        $dto = $resolved[0];
+        $this->assertSame('from_route', $dto->foo);
+        $this->assertSame('from_query', $dto->bar);
+        $this->assertSame('from_query', $dto->baz);
+    }
 }

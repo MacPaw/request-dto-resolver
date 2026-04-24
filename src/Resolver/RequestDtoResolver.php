@@ -63,13 +63,10 @@ class RequestDtoResolver implements ValueResolverInterface
             }
         }
 
-        $queryAll = $request->query->all();
-        $requestAll = $request->request->all();
-
         $params = [];
         foreach ($form->all() as $key => $value) {
             $lookupKey = $value->getConfig()->getOption('attr')['lookupKey'] ?? $key;
-            $params[$key] = $data[$lookupKey] ?? $queryAll[$lookupKey] ?? $requestAll[$lookupKey] ?? null;
+            $params[$key] = $data[$lookupKey] ?? $this->getParameterFromRequestBags($request, $lookupKey);
             if ($params[$key] === null) {
                 $params[$key] = $request->headers->get($lookupKey);
             }
@@ -90,6 +87,26 @@ class RequestDtoResolver implements ValueResolverInterface
         }
 
         return [$form->getData()];
+    }
+
+    /**
+     * Mirrors deprecated Request::get() precedence: attributes (route params), then query, then body.
+     */
+    private function getParameterFromRequestBags(Request $request, string $lookupKey): mixed
+    {
+        if ($request->attributes->has($lookupKey)) {
+            return $request->attributes->get($lookupKey);
+        }
+
+        if ($request->query->has($lookupKey)) {
+            return $request->query->all()[$lookupKey];
+        }
+
+        if ($request->request->has($lookupKey)) {
+            return $request->request->all()[$lookupKey];
+        }
+
+        return null;
     }
 
     private function resolveFormat(Request $request): string
