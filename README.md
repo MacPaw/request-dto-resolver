@@ -1,5 +1,7 @@
 # Symfony Request DTO Resolver Bundle
 
+![Request DTO Resolver](.github/header.png)
+
 Automatically resolves and validates Symfony HTTP request data (JSON, form-data, query parameters) into DTOs.
 
 ## Features
